@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "nodemon ./bin/www",
-    "build": "pulp browserify --to public/app.js",
+    "build": "pulp browserify --optimise --to public/app.js",
     "watch": "pulp --watch browserify --to public/app.js"
   },
   "dependencies": {
