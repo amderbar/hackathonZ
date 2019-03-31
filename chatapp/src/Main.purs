@@ -1,17 +1,30 @@
 module Main where
 
-import Prelude
-import Data.Array              hiding (null)
-import Data.Foldable           as Fold
-import Data.Generic.Rep
-import Data.Generic.Rep.Show
-import Data.Maybe
-import Data.String
+import Prelude                   (class Eq
+                                 , type (~>)
+                                 , Unit
+                                 , bind
+                                 , const
+                                 , discard
+                                 , map
+                                 , pure
+                                 , unit
+                                 , ($)
+                                 , (<$)
+                                 , (<$>)
+                                 , (<*)
+                                 , (<<<)
+                                 , (<>)
+                                 , (>>=)
+                                 )
+import Data.Array                ((:))
+import Data.Foldable             (oneOf)
+import Data.Maybe                (Maybe(..))
+import Data.String               (null, trim)
 import Effect                    (Effect)
-import Effect                  as Eff
-import Effect.Class            as EffC
 import Effect.Aff                (Aff)
 import Effect.Aff              as Aff
+import Effect.SocketIO.Client  as SockIO
 import Halogen                 as Halo
 import Halogen.Aff             as HAff
 import Halogen.HTML            as Html
@@ -23,6 +36,7 @@ import Routing.Match           as Match
 import Routing.Hash            as Route
 import Web.HTML                as Web
 import Web.HTML.Window         as Window
+import Web.HTML.Location       as Location
 -- import OnsenUI                 as Onsen
 
 main :: Effect Unit
@@ -39,28 +53,26 @@ data RouteHash
     | Room
 
 derive instance eqRouteHash :: Eq RouteHash
-derive instance genericRouteHash :: Generic RouteHash _
-instance showRouteHash :: Show RouteHash where
-    show = genericShow
 
 routeHref :: RouteHash -> String
 routeHref  Index    = ""
 routeHref  Room     = "#room"
 
 menuHash :: Match.Match RouteHash
-menuHash = Fold.oneOf
+menuHash = oneOf
     [ Room <$ Match.lit "room"
     , pure Index
     ] <* Match.end
 
 routing :: forall m a. (m Unit -> Aff a) -> (RouteHash -> Unit -> m Unit) -> Aff (Effect Unit)
-routing query hashAction = EffC.liftEffect $ Route.matches menuHash \_ newHash ->
+routing query hashAction = Halo.liftEffect $ Route.matches menuHash \_ newHash ->
       Aff.launchAff_ $ query $ Halo.action $ hashAction newHash
 
 -- Root UI Component
 
 type State =
     { route   :: RouteHash
+    , socket  :: Maybe SockIO.Socket
     , user    :: String
     , message :: String
     , msgs    :: Array String
@@ -68,7 +80,7 @@ type State =
 
 data Query a
     = ChangeHash RouteHash a
-    | CancelSubmit a
+    | NothingToDo a
     | InputName String a
     | EnterRoom a
     | InputMessage String a
@@ -91,6 +103,7 @@ haloApp =
   initialState :: State
   initialState =
     { route   : Index
+    , socket  : Nothing
     , user    : ""
     , message : ""
     , msgs    : []
@@ -107,7 +120,7 @@ haloApp =
     Halo.modify_ (_ { route = newHash })
     pure next
 
-  eval (CancelSubmit next) = pure next
+  eval (NothingToDo next) = pure next
 
   eval (InputName name next) = do
     Halo.modify_ (_ { user = name })
@@ -116,8 +129,12 @@ haloApp =
   eval (EnterRoom next) = do
     name <- map (trim <<< _.user) Halo.get
     if null name
-      then Halo.liftEffect $ Window.alert "ユーザ名を入力してください。" =<< Web.window
-      else Halo.liftEffect $ Route.setHash (routeHref Room)
+      then Halo.liftEffect $ Web.window >>= Window.alert "ユーザ名を入力してください。"
+      else do
+        Halo.liftEffect $ Route.setHash (routeHref Room)
+        sock <- subscribeSocketIO
+        Halo.modify_ (_ { socket = Just sock })
+        Halo.liftEffect $ SockIO.emit sock "enterEvent" (name <> "さんが入室しました。")
     pure next
 
   eval (InputMessage msg next) = do
@@ -125,13 +142,16 @@ haloApp =
     pure next
 
   eval (PublishMessage next) = do
-    msg <- map _.message Halo.get
+    st <- Halo.get
+    let msg  = st.user <> "さん：" <> st.message
+    case st.socket of
+      (Just sock) -> Halo.liftEffect $ SockIO.emit sock "publishEvent" msg
+      Nothing     -> pure unit
     Halo.modify_ (_ { message = "" })
-    eval (ReceiveMessage msg next)
-    -- pure next
+    pure next
 
   eval (ReceiveMessage msg next) = do
-    msgs <- map _.msgs Halo.get
+    msgs <- _.msgs <$> Halo.get
     Halo.modify_ (_ { msgs = msg : msgs })
     pure next
 
@@ -144,12 +164,19 @@ haloApp =
     pure next
 
   eval (ExitRoom next) = do
-    Halo.modify_ (_ { user = "", message = "", msgs = [] })
+    st <- Halo.get
+    case st.socket of
+      (Just sock) -> do
+        Halo.liftEffect $ SockIO.emit sock "enterEvent" (st.user <> "さんが退室しました。")
+        Halo.liftEffect (SockIO.close sock)
+      Nothing     -> pure unit
+    Halo.modify_ (_ { socket = Nothing, user = "", message = "", msgs = [] })
     Halo.liftEffect $ Route.setHash (routeHref Index)
     pure next
 
 -- Page Views
 
+containerHbs :: RouteHash -> Array ( Halo.ComponentHTML Query) -> Halo.ComponentHTML Query
 containerHbs route body =
   Html.div
     [ HProp.class_ (HCore.ClassName "container") ]
@@ -164,11 +191,12 @@ containerHbs route body =
     , Html.div
         [ HProp.class_ (HCore.ClassName "row") ]
         [ Html.form
-          [ HEvent.onSubmit (HEvent.input_ CancelSubmit) ]
+          [ HEvent.onSubmit (HEvent.input_ NothingToDo) ]
           body
         ]
     ]
 
+indexHbs :: State -> Halo.ComponentHTML Query
 indexHbs state =
   containerHbs state.route
     [ Html.div
@@ -196,6 +224,7 @@ indexHbs state =
         ]
     ]
 
+roomHbs :: State -> Halo.ComponentHTML Query
 roomHbs state =
   containerHbs state.route
     [ Html.div
@@ -248,3 +277,25 @@ roomHbs state =
         ]
       ]
     ]
+
+-- socket.io
+subscribeSocketIO :: Halo.ComponentDSL State Query Message Aff SockIO.Socket
+subscribeSocketIO = do
+  host <- Halo.liftEffect $ Web.window >>= Window.location >>= Location.host
+  socket <- Halo.liftEffect $ SockIO.connect ("http://" <> host)
+  Halo.subscribe $ Halo.eventSource (attach socket "enterEvent")   onReceiveEnter
+  Halo.subscribe $ Halo.eventSource (attach socket "exitEvent")    onReceiveExit
+  Halo.subscribe $ Halo.eventSource (attach socket "publishEvent") onReceiveMessage
+  pure socket
+  where
+    attach :: forall a. SockIO.Socket -> SockIO.Event -> (a -> Effect Unit) -> Effect Unit
+    attach sock event = SockIO.on sock event
+
+    onReceiveEnter :: String -> Maybe (Query Halo.SubscribeStatus)
+    onReceiveEnter d = Just $ ReceiveMessage d Halo.Listening
+
+    onReceiveExit :: String -> Maybe (Query Halo.SubscribeStatus)
+    onReceiveExit d = Just $ ReceiveMessage d Halo.Listening
+
+    onReceiveMessage :: String -> Maybe (Query Halo.SubscribeStatus)
+    onReceiveMessage d = Just $ ReceiveMessage d Halo.Listening

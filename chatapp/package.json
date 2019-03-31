@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "nodemon ./bin/www"
+    "start": "nodemon ./bin/www",
+    "build": "pulp browserify --to public/app.js",
+    "watch": "pulp --watch browserify --to public/app.js"
   },
   "dependencies": {
     "body-parser": "^1.18.3",

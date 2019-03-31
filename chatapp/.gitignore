@@ -38,3 +38,6 @@ npm-debug.log
 /.psc*
 /.purs*
 /.psa*
+
+# product code
+/public/app.js
