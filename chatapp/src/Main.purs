@@ -229,7 +229,7 @@ roomHbs state =
   containerHbs state.route
     [ Html.div
       [ HProp.class_ (Html.ClassName "room-login_user") ]
-      [ Html.text $ state.user <> "さん"
+      [ Html.text $ "ログインユーザ：" <> state.user <> "さん"
       , Html.input
         [ HProp.type_ HProp.InputHidden
         , HProp.id_ "userName"
