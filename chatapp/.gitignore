@@ -41,3 +41,4 @@ npm-debug.log
 
 # product code
 /public/app.js
+/bin/www
