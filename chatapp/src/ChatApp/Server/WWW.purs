@@ -9,13 +9,13 @@ import Node.Express.App        as Express
 import Node.HTTP               as Node
 import Node.Process            as Env
 import ChatApp.Server.App      as App
-import ChatApp.Server.SocketIO as SockIO
+import ChatApp.Server.Sockets  as Sock
 
 main :: Effect Node.Server
 main = do
   port <- normalizePort 3000
   server <- Express.listenHttp App.app port (onListening port) -- on connection
-  SockIO.listen server
+  Sock.listen server
   -- TODO: listen as socketIo server
   -- TODO: on server "error" onError
   -- TODO: on server "listening" onListening
