@@ -1,4 +1,4 @@
-module Main where
+module ChatApp.Client where
 
 import Prelude                   (class Eq
                                  , type (~>)

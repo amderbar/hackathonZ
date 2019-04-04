@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "start": "nodemon ./bin/www",
-    "build": "pulp browserify --optimise --to public/app.js",
-    "watch": "pulp --watch browserify --to public/app.js"
+    "build:client": "pulp browserify --optimise --main ChatApp.Client --to public/app.js",
+    "watch:client": "pulp --watch browserify --main ChatApp.Client --to public/app.js",
+    "build:server": "pulp build --main ChatApp.Server.WWW --to bin/www",
+    "watch:server": "pulp --watch run --main ChatApp.Server.WWW"
   },
   "dependencies": {
     "body-parser": "^1.18.3",
