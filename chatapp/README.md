@@ -14,7 +14,8 @@ hackathon-chatapp
     npm install
     npx bower install
     # アプリをビルド
-    npm run build
+    npm run build:server
+    npm run build:client
     # 起動コマンドを実行
     npm start
     ```
