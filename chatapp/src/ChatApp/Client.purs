@@ -24,7 +24,6 @@ import Data.String               (null, trim)
 import Effect                    (Effect)
 import Effect.Aff                (Aff)
 import Effect.Aff              as Aff
-import Effect.SocketIO.Client  as SockIO
 import Halogen                 as Halo
 import Halogen.Aff             as HAff
 import Halogen.HTML            as Html
@@ -32,6 +31,7 @@ import Halogen.HTML.Core       as HCore
 import Halogen.HTML.Events     as HEvent
 import Halogen.HTML.Properties as HProp
 import Halogen.VDom.Driver     as HVdom
+import Node.SocketIO.Client    as SockIO
 import Routing.Match           as Match
 import Routing.Hash            as Route
 import Web.HTML                as Web
