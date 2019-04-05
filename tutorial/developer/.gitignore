@@ -28,3 +28,14 @@ node_modules
 
 # Debug log from npm
 npm-debug.log
+
+# PureScript work files
+bower_components/
+node_modules/
+.pulp-cache/
+output/
+generated-docs/
+.psc-package/
+.psc*
+.purs*
+.psa*
