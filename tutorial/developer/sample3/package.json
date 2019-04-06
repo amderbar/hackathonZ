@@ -3,12 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "nodemon ./bin/www"
+    "start": "pulp --watch run --main Server.WWW",
+    "build": "pulp browserify --optimise --main Client --to public/app.js"
   },
   "dependencies": {
-    "express": "~4.16.2",
-    "hbs": "^4.0.2",
-    "nodemon": "^1.18.10",
-    "socket.io": "^2.0.4"
+    "express": "^4.16.4",
+    "socket.io": "^2.2.0"
+  },
+  "devDependencies": {
+    "bower": "^1.8.8",
+    "pulp": "^12.3.1",
+    "purescript": "^0.12.3"
   }
 }

@@ -1,0 +1,30 @@
+{
+  "name": "sample3",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.1.0",
+    "purescript-console": "^4.2.0",
+    "purescript-effect": "^2.0.1",
+    "purescript-halogen": "^4.0.0",
+    "purescript-routing": "^9.0.0",
+    "purescript-express": "^0.8.0",
+    "purescript-node-process": "^7.0.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^4.0.0"
+  },
+  "resolutions": {
+    "purescript-foreign-object": "^2.0.1",
+    "purescript-web-html": "^2.0.0",
+    "purescript-web-file": "^2.0.0",
+    "purescript-typelevel-prelude": "^4.0.0",
+    "purescript-web-dom": "^2.0.0",
+    "purescript-web-storage": "^3.0.0",
+    "purescript-web-events": "^2.0.0"
+  }
+}
